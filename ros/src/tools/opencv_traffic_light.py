@@ -15,6 +15,39 @@ def binary_to_3_channel_img(binary_img):
     return new_img
 
 
+def region_of_interest(img, vertices):
+    """
+    Applies an image mask.
+
+    Only keeps the region of the image defined by the polygon
+    formed from `vertices`. The rest of the image is set to black.
+    """
+    # defining a blank mask to start with
+    mask = np.zeros_like(img)
+
+    # defining a 3 channel or 1 channel color to fill the mask with depending on the input image
+    if len(img.shape) > 2:
+        channel_count = img.shape[2]  # i.e. 3 or 4 depending on your image
+        ignore_mask_color = (255,) * channel_count
+    else:
+        ignore_mask_color = 255
+
+    # filling pixels inside the polygon defined by "vertices" with the fill color
+    cv2.fillPoly(mask, vertices, ignore_mask_color)
+
+    # returning the image only where mask pixels are nonzero
+    masked_image = cv2.bitwise_and(img, mask)
+    return masked_image
+
+
+def render_region_of_interest(img, vertices):
+    for i in range(0, 4):
+        x1, y1 = vertices[i]
+        next_vertices = i + 1 if i < 3 else 0
+        x2, y2 = vertices[next_vertices]
+        cv2.line(img, (x1, y1), (x2, y2), color=(255, 0, 0), thickness=2)
+
+
 def render_recognized_circles(image, circles, border_color=(0, 0, 0), center_color=(0, 0, 255)):
     for i in circles[0, :]:
         # draw the outer circle
@@ -74,9 +107,25 @@ def recognize_yellow_light(hsv_image):
     return get_hough_circles(weighted_img)
 
 
-def recognize_traffic_lights(image):
+def recognize_traffic_lights(image, use_roi=False):
+    # Define the region of interest to extract
+    image_for_recognizing = image
+    if use_roi:
+        height, width, _ = image.shape
+        roi_vertices = np.array([[(0, 2 * height // 3),
+                                  (0, 0),
+                                  (width, 0),
+                                  (width, 2 * height // 3)]],
+                                dtype=np.int32)
+        roi = region_of_interest(image, roi_vertices)
+
+        # Render the Region of Interest
+        render_region_of_interest(image, roi_vertices[0])
+        image_for_recognizing = roi
+
     # Convert to HSV color space to recognize the traffic light
-    hsv_image = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+    hsv_image = cv2.cvtColor(image_for_recognizing, cv2.COLOR_RGB2HSV)
+
     red_circles = recognize_red_light(hsv_image)
     if red_circles is not None:
         render_recognized_circles(image, red_circles, border_color=(255, 255, 0))
