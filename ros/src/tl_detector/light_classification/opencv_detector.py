@@ -118,7 +118,7 @@ def recognize_traffic_lights(image, use_roi=False):
         image_for_recognizing = roi
 
     # Convert to HSV color space to recognize the traffic light
-    hsv_image = cv2.cvtColor(image_for_recognizing, cv2.COLOR_RGB2HSV)
+    hsv_image = cv2.cvtColor(image_for_recognizing, cv2.COLOR_BGR2HSV)
 
     red_circles = recognize_red_light(hsv_image)
     if red_circles is not None:
