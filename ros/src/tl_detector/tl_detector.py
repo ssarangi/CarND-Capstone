@@ -146,6 +146,7 @@ class TLDetector(object):
         self.waypoints = None
         return -1, TrafficLight.UNKNOWN
 
+
 if __name__ == '__main__':
     try:
         TLDetector()
