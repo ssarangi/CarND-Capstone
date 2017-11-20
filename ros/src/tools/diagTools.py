@@ -53,6 +53,9 @@ class DiagnosticsScreen:
         self.camera_img_idx = 0
         self.camera_image = None
 
+        # Polyline for rendering the waypoints
+        self.XYPolyline = None
+
         # Run the Loop finally after everything has been initialized
         self.loop()
 
@@ -130,11 +133,12 @@ class DiagnosticsScreen:
         self.camera_image = self.bridge.imgmsg_to_cv2(msg, "rgb8")
         self.camera_img_idx += 1
         self.camera_image, traffic_light = recognize_traffic_lights(self.camera_image)
+        
         logger.info('Traffic Light: %s' % traffic_light)
 
         # Save the camera image
-        camera_image = cv2.cvtColor(self.camera_image, cv2.COLOR_BGR2RGB)
-        cv2.imwrite('src/tools/traffic_lights/%s.png' % self.camera_img_idx, camera_image)
+        # camera_image = cv2.cvtColor(self.camera_image, cv2.COLOR_BGR2RGB)
+        # cv2.imwrite('src/tools/traffic_lights/%s.png' % self.camera_img_idx, camera_image)
 
     def initialize_light_to_waypoint_map(self):
         # find the closest waypoint to the given (x,y) of the triffic light
