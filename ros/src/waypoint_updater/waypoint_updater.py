@@ -53,6 +53,7 @@ class WaypointUpdater(object):
         self.current_velocity = 0.0
 
         self.waypoints_kdtree = None
+        self.current_traffic_light = None
 
         rospy.spin()
 
@@ -83,7 +84,8 @@ class WaypointUpdater(object):
 
     def traffic_cb(self, msg):
         # TODO: Callback for /traffic_waypoint message. Implement
-        pass
+        rospy.loginfo('Received traffic light callback')
+        self.current_traffic_light = helper.TrafficLightEnum.translate_styx_traffic_light(msg)
 
     def obstacle_cb(self, msg):
         # TODO: Callback for /obstacle_waypoint message. We will implement it later
@@ -97,7 +99,7 @@ class WaypointUpdater(object):
 
     def distance(self, waypoints, wp1, wp2):
         dist = 0
-        dl = lambda a, b: math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2  + (a.z-b.z)**2)
+        dl = lambda a, b: math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2 + (a.z-b.z)**2)
         for i in range(wp1, wp2+1):
             dist += dl(waypoints[wp1].pose.pose.position, waypoints[i].pose.pose.position)
             wp1 = i

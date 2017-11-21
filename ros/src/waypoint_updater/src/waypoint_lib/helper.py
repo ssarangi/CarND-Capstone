@@ -4,6 +4,24 @@ import tf
 from tf import transformations as t
 
 
+class TrafficLightEnum:
+    UNKNOWN = 4,
+    GREEN = 2,
+    YELLOW = 1,
+    RED = 0,
+
+    @staticmethod
+    def translate_styx_traffic_light(val):
+        if val == 0:
+            return TrafficLightEnum.RED
+        elif val == 1:
+            return TrafficLightEnum.YELLOW
+        elif val == 2:
+            return TrafficLightEnum.GREEN
+        elif val == 3:
+            return TrafficLightEnum.UNKNOWN
+
+
 def euclid_dist(p1, p2):
     return math.sqrt((p1.x - p2.x)**2 + (p1.y - p2.y)**2)
 
