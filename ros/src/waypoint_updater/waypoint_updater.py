@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
 # Global packages
-import rospy
 import math
+import rospy
+import scipy.spatial
 import time
 
 # Local project packages
@@ -51,6 +52,8 @@ class WaypointUpdater(object):
         self.waypoints = None
         self.current_velocity = 0.0
 
+        self.waypoints_kdtree = None
+
         rospy.spin()
 
     def curr_vel_cb(self, curr_vel_msg):
@@ -64,7 +67,7 @@ class WaypointUpdater(object):
         current_pose = pose
 
         # Compute the index of the waypoint closest to the current pose.
-        closest_wp_idx = helper.next_waypoint_index(current_pose, self.waypoints)
+        closest_wp_idx = helper.next_waypoint_index_kdtree(current_pose, self.waypoints_kdtree)
 
         # Find number of waypoints ahead dictated by LOOKAHEAD_WPS
         next_wps = self.waypoints[closest_wp_idx:closest_wp_idx + LOOKAHEAD_WPS]
@@ -73,6 +76,10 @@ class WaypointUpdater(object):
     def waypoints_cb(self, waypoints):
         rospy.loginfo('Received Base waypoints from master...')
         self.waypoints = waypoints.waypoints
+        # Create a numpy version of the waypoints
+        np_waypoints = helper.create_numpy_repr(self.waypoints)
+        self.waypoints_kdtree = scipy.spatial.cKDTree(np_waypoints, leafsize=5)
+        rospy.loginfo('Created KDTree for fast NN query')
 
     def traffic_cb(self, msg):
         # TODO: Callback for /traffic_waypoint message. Implement

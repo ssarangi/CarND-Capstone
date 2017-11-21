@@ -8,6 +8,16 @@ def euclid_dist(p1, p2):
     return math.sqrt((p1.x - p2.x)**2 + (p1.y - p2.y)**2)
 
 
+def create_numpy_repr(waypoints):
+    """Create a numpy representation of the waypoints message. Useful for creating kdtrees out of it."""
+    points = []
+    for waypoint in waypoints:
+        x, y, z = waypoint.pose.pose.position.x, waypoint.pose.pose.position.y, waypoint.pose.pose.position.z
+        points.append([x, y, z])
+
+    return np.array(points)
+
+
 def yaw_from_orientation(o):
     # https://answers.ros.org/question/69754/quaternion-transformations-in-python/
     q = (o.x, o.y, o.z, o.w)
@@ -20,7 +30,7 @@ def dist_pose_waypoint(pose, waypoint):
     return dist
 
 
-def next_waypoint_index(pose, waypoints):
+def next_waypoint_index_brute_force(pose, waypoints):
     """Given a current pose find the closest index of from the list of waypoints.
 
     :arg:
@@ -43,6 +53,35 @@ def next_waypoint_index(pose, waypoints):
         delta -= math.pi
 
     total_waypoints = len(waypoints)
+
+    if delta > math.pi/4:
+        closest_wp_idx = (closest_wp_idx + 1) % total_waypoints
+
+    return closest_wp_idx
+
+
+def next_waypoint_index_kdtree(pose, kdtree):
+    """Given a current pose find the closest index of from the list of waypoints.
+
+    :arg:
+        pose: Current pose (position) of the vehicle.
+        kdtree: Precomputed kdtree for doing the nearest neighbor search.
+    :returns
+        The closest index of the waypoint
+    """
+    distance, closest_wp_idx = kdtree.query([pose.pose.position.x, pose.pose.position.y, pose.pose.position.z], k=1)
+    waypoint = kdtree.data[closest_wp_idx]
+
+    pose_orientation = pose.pose.orientation
+
+    pose_yaw = yaw_from_orientation(pose_orientation)
+    angle = math.atan2(waypoint[1] - pose.pose.position.y, waypoint[0] - pose.pose.position.x)
+    delta = abs(pose_yaw - angle)
+
+    while delta > math.pi:
+        delta -= math.pi
+
+    total_waypoints = len(kdtree.data)
 
     if delta > math.pi/4:
         closest_wp_idx = (closest_wp_idx + 1) % total_waypoints
