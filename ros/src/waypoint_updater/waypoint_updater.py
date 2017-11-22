@@ -52,6 +52,7 @@ class WaypointUpdater(object):
         self.initialize_stop_line_positions_kdtree()
 
         self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1)
+        self.stop_line_waypoint_pub = rospy.Publisher('stop_line_waypoint', Int32, queue_size=1)
 
         # TODO: Add other member variables you need below
         # A list of all the waypoints of the track as reported by master node.
@@ -94,6 +95,8 @@ class WaypointUpdater(object):
         stop_line_pose.pose.orientation = pose.pose.orientation
         stop_line_waypoint_idx = helper.next_waypoint_index_kdtree(stop_line_pose.pose, self.waypoints_kdtree)
 
+        self.stop_line_waypoint_pub.publish(Int32(stop_line_waypoint_idx))
+        
         rospy.loginfo("Stop Line Waypoint idx: %s", stop_line_waypoint_idx)
         # TODO: Now that the stop line way point index is found, figure out the deceleration or acceleration if needed.
         self.publish(next_wps)
