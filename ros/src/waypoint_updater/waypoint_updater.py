@@ -5,6 +5,7 @@ import math
 import rospy
 import scipy.spatial
 import time
+import yaml
 
 # Local project packages
 import waypoint_lib.helper as helper
@@ -14,6 +15,7 @@ from geometry_msgs.msg import TwistStamped
 from std_msgs.msg import Int32
 from geometry_msgs.msg import PoseStamped
 from styx_msgs.msg import Lane, Waypoint
+from styx_msgs.msg import TrafficLightArray, TrafficLight
 
 
 '''
@@ -42,8 +44,11 @@ class WaypointUpdater(object):
         rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
 
         # TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
-        rospy.Subscriber('/traffic_waypoint', Int32, self.traffic_cb)
+        rospy.Subscriber('/traffic_waypoint', TrafficLight, self.upcoming_traffic_light_cb)
         rospy.Subscriber('/current_velocity', TwistStamped, self.curr_vel_cb, queue_size=1)
+
+        config_string = rospy.get_param("/traffic_light_config")
+        self.config = yaml.load(config_string)
 
         self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1)
 
@@ -68,7 +73,7 @@ class WaypointUpdater(object):
         current_pose = pose
 
         # Compute the index of the waypoint closest to the current pose.
-        closest_wp_idx = helper.next_waypoint_index_kdtree(current_pose, self.waypoints_kdtree)
+        closest_wp_idx = helper.next_waypoint_index_kdtree(current_pose.pose, self.waypoints_kdtree)
 
         # Find number of waypoints ahead dictated by LOOKAHEAD_WPS
         next_wps = self.waypoints[closest_wp_idx:closest_wp_idx + LOOKAHEAD_WPS]
@@ -80,12 +85,14 @@ class WaypointUpdater(object):
         # Create a numpy version of the waypoints
         np_waypoints = helper.create_numpy_repr(self.waypoints)
         self.waypoints_kdtree = scipy.spatial.cKDTree(np_waypoints, leafsize=5)
-        rospy.loginfo('Created KDTree for fast NN query')
+        rospy.loginfo('Created KDTree for vehicle waypoints for fast NN query')
 
-    def traffic_cb(self, msg):
-        # TODO: Callback for /traffic_waypoint message. Implement
-        rospy.loginfo('Received traffic light callback')
-        self.current_traffic_light = helper.TrafficLightEnum.translate_styx_traffic_light(msg)
+    def upcoming_traffic_light_cb(self, msg):
+        # rospy.loginfo('Received traffic light color callback')
+        rospy.loginfo(msg.idx)
+        self.current_traffic_light = msg
+        rospy.loginfo('Current Traffic light Color: %s',
+                      helper.get_traffic_light_color(self.current_traffic_light.state))
 
     def obstacle_cb(self, msg):
         # TODO: Callback for /obstacle_waypoint message. We will implement it later

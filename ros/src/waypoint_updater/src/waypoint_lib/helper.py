@@ -4,22 +4,20 @@ import tf
 from tf import transformations as t
 
 
-class TrafficLightEnum:
-    UNKNOWN = 4,
-    GREEN = 2,
-    YELLOW = 1,
-    RED = 0,
+def get_traffic_light_color(state):
+    # UNKNOWN = 4,
+    # GREEN = 2,
+    # YELLOW = 1,
+    # RED = 0,
 
-    @staticmethod
-    def translate_styx_traffic_light(val):
-        if val == 0:
-            return TrafficLightEnum.RED
-        elif val == 1:
-            return TrafficLightEnum.YELLOW
-        elif val == 2:
-            return TrafficLightEnum.GREEN
-        elif val == 3:
-            return TrafficLightEnum.UNKNOWN
+    if state == 0:
+        return "RED"
+    elif state == 1:
+        return "YELLOW"
+    elif state == 2:
+        return "GREEN"
+    elif state == 3:
+        return "UNKNOWN"
 
 
 def euclid_dist(p1, p2):
@@ -87,13 +85,13 @@ def next_waypoint_index_kdtree(pose, kdtree):
     :returns
         The closest index of the waypoint
     """
-    distance, closest_wp_idx = kdtree.query([pose.pose.position.x, pose.pose.position.y, pose.pose.position.z], k=1)
+    distance, closest_wp_idx = kdtree.query([pose.position.x, pose.position.y, pose.position.z], k=1)
     waypoint = kdtree.data[closest_wp_idx]
 
-    pose_orientation = pose.pose.orientation
+    pose_orientation = pose.orientation
 
     pose_yaw = yaw_from_orientation(pose_orientation)
-    angle = math.atan2(waypoint[1] - pose.pose.position.y, waypoint[0] - pose.pose.position.x)
+    angle = math.atan2(waypoint[1] - pose.position.y, waypoint[0] - pose.position.x)
     delta = abs(pose_yaw - angle)
 
     while delta > math.pi:
