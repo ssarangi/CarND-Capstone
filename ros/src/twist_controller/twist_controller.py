@@ -15,7 +15,11 @@ class Controller(object):
                  wheel_base,
                  steer_ratio,
                  min_speed,
-                 max_lat_accel):
+                 max_lat_accel,
+                 vehicle_mass,
+                 fuel_capacity,
+                 brake_deadband,
+                 wheel_radius):
         self.throttle_pid = pid.PID(kp=1.5, ki=0.0, kd=0.01, mn=max_brake, mx=max_throttle)
         self.throttle_filter = lowpass.LowPassFilter(tau=0.0, ts=1.0)
 
@@ -27,6 +31,12 @@ class Controller(object):
                                                            min_speed,
                                                            max_lat_accel,
                                                            max_steer_angle)
+        self.vehicle_mass = vehicle_mass
+        self.fuel_capacity = fuel_capacity
+        self.brake_deadband = brake_deadband
+        self.wheel_radius = wheel_radius
+        self.previous_state = None
+
         self.clk = rospy.get_time()
 
     def reset(self):
@@ -52,7 +62,7 @@ class Controller(object):
         steer = self.steer_filter.filt(steering + 0.1 * yaw_control)
         return steer
 
-    def get_throttle_value(self, dt, target_linear_vel, target_angular_vel, current_linear_vel, current_angular_vel):
+    def get_throttle_value(self, dt, target_linear_vel, current_linear_vel):
         velocity_cte = target_linear_vel - current_linear_vel
 
         throttle = self.throttle_pid.step(velocity_cte, dt)
@@ -60,8 +70,11 @@ class Controller(object):
 
         # Clamp the value between 0.0 & 1.0
         throttle = min(1.0, max(0.0, throttle))
-        rospy.loginfo("Throttle: %s" % throttle)
         return throttle
+
+    def get_braking_force(self):
+        brake = abs((self.vehicle_mass + self.fuel_capacity) * self.wheel_radius) * 10
+        return brake
 
     def control(self,
                 target_linear_vel,
@@ -73,12 +86,22 @@ class Controller(object):
 
         steer = self.get_steer_value(dt, steer_cte, target_linear_vel, target_angular_vel, current_linear_vel)
 
-        throttle = self.get_throttle_value(dt,
-                                           target_linear_vel,
-                                           target_angular_vel,
-                                           current_linear_vel,
-                                           current_angular_vel)
-        return throttle, 0.0, steer
+        if target_linear_vel > current_linear_vel:
+            throttle = self.get_throttle_value(dt,
+                                               target_linear_vel,
+                                               current_linear_vel)
+            brake = 0.0
+            current_state = 'Throttle'
+        else:
+            throttle = 0.0
+            brake = self.get_braking_force()
+            current_state = 'Braking'
+
+        if self.previous_state != current_state:
+            rospy.logwarn('State Changed: %s' % current_state)
+
+        self.previous_state = current_state
+        return throttle, brake, steer
 
 
 

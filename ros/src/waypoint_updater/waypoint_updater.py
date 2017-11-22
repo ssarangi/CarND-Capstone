@@ -2,6 +2,7 @@
 
 # Global packages
 import math
+import numpy as np
 import rospy
 import scipy.spatial
 import time
@@ -76,19 +77,32 @@ class WaypointUpdater(object):
     def set_velocity_leading_to_stop_point(self, current_pose_wp_idx, stop_point_idx):
         new_waypoints = self.waypoints[:]  # Copy the list
 
-        # Get the current velocity
-        decelerate = self.current_velocity - 0 # Get to 0 mph... Used just for illustration
-
         # Compute the total distances leading up to the stop point
         distances = [self.distance(new_waypoints, i, i+1)
                      for i in range(current_pose_wp_idx, stop_point_idx + 1)]
 
-        total_distance = sum(distances)
-        unit_distance_deceleration = decelerate / total_distance
+        total_distance = int(math.floor(sum(distances)))
+
+        VEL_THRESHOLD = 5
+        # if the deceleration < VEL_THRESHOLD mph then increase the speed to a proportion of the distance
+        if self.current_velocity < VEL_THRESHOLD:
+            # Use a gaussian distribution to get the car to speed up.
+            # x = np.linspace(0, total_distance, total_distance)
+            # mu, sig = 0.1, 1.0
+            # distribution = np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
+            distribution = np.concatenate((
+                np.linspace(self.current_velocity, VEL_THRESHOLD, total_distance),
+                np.linspace(VEL_THRESHOLD, 0, total_distance)), axis=0)
+        else:
+            # Use a linear distribution to get the speeds.
+            distribution = np.linspace(self.current_velocity, 0.0, total_distance, endpoint=True)
 
         dist_idx = 0
+        velocities = []
         for wp_idx in range(current_pose_wp_idx + 1, stop_point_idx + 1):
-            self.set_waypoint_velocity(new_waypoints, wp_idx, unit_distance_deceleration * distances[dist_idx])
+            velocity = distribution[int(distances[dist_idx])]
+            velocities.append(velocity)
+            self.set_waypoint_velocity(new_waypoints, wp_idx, velocity)
             dist_idx += 1
 
         return new_waypoints
@@ -116,12 +130,12 @@ class WaypointUpdater(object):
 
         self.stop_line_waypoint_pub.publish(Int32(stop_line_waypoint_idx))
 
-        rospy.loginfo("Stop Line Waypoint idx: %s", stop_line_waypoint_idx)
-
+        # If the light is RED or YELLOW then slowly decrease the speed.
         if self.current_traffic_light is not None and\
            (self.current_traffic_light.state == 0 or self.current_traffic_light.state == 1):
             new_waypoints = self.set_velocity_leading_to_stop_point(closest_wp_idx, stop_line_waypoint_idx)
         else:
+            # If the lights are green just continue on the same path.
             new_waypoints = self.waypoints
 
         # Find number of waypoints ahead dictated by LOOKAHEAD_WPS
@@ -139,10 +153,7 @@ class WaypointUpdater(object):
 
     def upcoming_traffic_light_cb(self, msg):
         # rospy.loginfo('Received traffic light color callback')
-        rospy.loginfo(msg.idx)
         self.current_traffic_light = msg
-        rospy.loginfo('Current Traffic light Color: %s',
-                      helper.get_traffic_light_color(self.current_traffic_light.state))
 
     def obstacle_cb(self, msg):
         # TODO: Callback for /obstacle_waypoint message. We will implement it later

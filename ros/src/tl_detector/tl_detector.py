@@ -67,7 +67,6 @@ class TLDetector(object):
         self.traffic_lights_sub = None
 
     def publish_upcoming_light_state(self, idx, light_state):
-        rospy.loginfo('IDX: %s', idx)
         traffic_light = TrafficLight()
         traffic_light.header.frame_id = '/world'
         traffic_light.header.stamp = rospy.Time(time.time())
