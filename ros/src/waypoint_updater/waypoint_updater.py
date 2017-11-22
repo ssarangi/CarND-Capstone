@@ -96,7 +96,7 @@ class WaypointUpdater(object):
         stop_line_waypoint_idx = helper.next_waypoint_index_kdtree(stop_line_pose.pose, self.waypoints_kdtree)
 
         self.stop_line_waypoint_pub.publish(Int32(stop_line_waypoint_idx))
-        
+
         rospy.loginfo("Stop Line Waypoint idx: %s", stop_line_waypoint_idx)
         # TODO: Now that the stop line way point index is found, figure out the deceleration or acceleration if needed.
         self.publish(next_wps)

@@ -15,6 +15,7 @@ from opencv_traffic_light import recognize_traffic_lights
 
 from cv_bridge import CvBridge
 from geometry_msgs.msg import PoseStamped, Pose, TwistStamped
+from std_msgs.msg import Int32
 from styx_msgs.msg import Lane, Waypoint, TrafficLightArray, TrafficLight
 from sensor_msgs.msg import Image
 
@@ -43,6 +44,8 @@ class DiagnosticsScreen:
 
         self.sub_raw_camera = rospy.Subscriber('/image_color', Image, self.image_cb)
 
+        self.stop_line_position_sub = rospy.Subscriber('/stop_line_waypoint', Int32, self.stop_line_position_cb)
+
         # Params
         self.position = None
         self.theta = None
@@ -55,6 +58,8 @@ class DiagnosticsScreen:
 
         # Polyline for rendering the waypoints
         self.XYPolyline = None
+
+        self.stop_line_position = -1
 
         # Run the Loop finally after everything has been initialized
         self.loop()
@@ -71,6 +76,10 @@ class DiagnosticsScreen:
         with open(os.getcwd() + '/src/tl_detector/' + config_file, 'r') as myconfig:
             config_string = myconfig.read()
             self.config = yaml.load(config_string)
+
+    def stop_line_position_cb(self, msg):
+        self.stop_line_position = msg.data
+        logger.info("Stop Line position: %s" % msg.data)
 
     def pose_cb(self, msg):
         self.pose = msg.pose
@@ -141,7 +150,7 @@ class DiagnosticsScreen:
         # cv2.imwrite('src/tools/traffic_lights/%s.png' % self.camera_img_idx, camera_image)
 
     def initialize_light_to_waypoint_map(self):
-        # find the closest waypoint to the given (x,y) of the triffic light
+        # find the closest waypoint to the given (x,y) of the traffic light
         dl = lambda a, b: math.sqrt((a.x-b[0])**2 + (a.y-b[1])**2)
         for lidx in range(len(self.config['stop_line_positions'])):
             dist = 100000.
@@ -152,6 +161,15 @@ class DiagnosticsScreen:
                     tlwp = widx
                     dist = d1
             self.traffic_light_to_waypoint_map.append(tlwp)
+
+    def draw_stop_position(self, image, size=15):
+        font = cv2.FONT_HERSHEY_COMPLEX
+        color = (0, 0, 255)
+        wp = self.waypoints[self.stop_line_position]
+        x, y = wp.pose.pose.position.x, wp.pose.pose.position.y
+        cv2.circle(image, (int(x), int(self.screen.height - (y - self.screen.canvas.height))), size, color, -1)
+        cv2.putText(image, "SP", (int(x - 10), int(self.screen.height - (y - self.screen.canvas.height) + 40)), font, 1,
+                    color=(255, 255, 0), thickness=2)
 
     def draw_waypoints(self, image, size=5, size2=10):
         color = (128, 128, 128)
@@ -200,6 +218,7 @@ class DiagnosticsScreen:
         self.drawTrafficLights(image)
         self.drawCurrentPos(image)
         self.drawCameraImage(image)
+        self.draw_stop_position(image)
 
     def loop(self):
         rate = rospy.Rate(self.updateRate)
