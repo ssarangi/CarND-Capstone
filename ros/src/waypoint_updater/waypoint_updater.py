@@ -45,7 +45,7 @@ class WaypointUpdater(object):
 
         # TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
         rospy.Subscriber('/traffic_waypoint', TrafficLight, self.upcoming_traffic_light_cb)
-        rospy.Subscriber('/current_velocity', TwistStamped, self.curr_vel_cb, queue_size=1)
+        rospy.Subscriber('/current_velocity', TwistStamped, self.current_velocity_cb, queue_size=1)
 
         config_string = rospy.get_param("/traffic_light_config")
         self.config = yaml.load(config_string)
@@ -62,27 +62,46 @@ class WaypointUpdater(object):
         self.waypoints_kdtree = None
         self.current_traffic_light = None
 
+        self.current_pose = None
+
         rospy.spin()
 
     def initialize_stop_line_positions_kdtree(self):
         self.stop_line_positions = self.config['stop_line_positions']
         self.stop_line_positions_kdtree = scipy.spatial.cKDTree(self.stop_line_positions)
 
-    def curr_vel_cb(self, curr_vel_msg):
+    def current_velocity_cb(self, curr_vel_msg):
         self.current_velocity = curr_vel_msg.twist.linear.x
+
+    def set_velocity_leading_to_stop_point(self, current_pose_wp_idx, stop_point_idx):
+        new_waypoints = self.waypoints[:]  # Copy the list
+
+        # Get the current velocity
+        decelerate = self.current_velocity - 0 # Get to 0 mph... Used just for illustration
+
+        # Compute the total distances leading up to the stop point
+        distances = [self.distance(new_waypoints, i, i+1)
+                     for i in range(current_pose_wp_idx, stop_point_idx + 1)]
+
+        total_distance = sum(distances)
+        unit_distance_deceleration = decelerate / total_distance
+
+        dist_idx = 0
+        for wp_idx in range(current_pose_wp_idx + 1, stop_point_idx + 1):
+            self.set_waypoint_velocity(new_waypoints, wp_idx, unit_distance_deceleration * distances[dist_idx])
+            dist_idx += 1
+
+        return new_waypoints
 
     def pose_cb(self, pose):
         if self.waypoints is None:
             rospy.error('No base_waypoints have been received by master')
             return
 
-        current_pose = pose
+        self.current_pose = pose
 
         # Compute the index of the waypoint closest to the current pose.
-        closest_wp_idx = helper.next_waypoint_index_kdtree(current_pose.pose, self.waypoints_kdtree)
-
-        # Find number of waypoints ahead dictated by LOOKAHEAD_WPS
-        next_wps = self.waypoints[closest_wp_idx:closest_wp_idx + LOOKAHEAD_WPS]
+        closest_wp_idx = helper.next_waypoint_index_kdtree(self.current_pose.pose, self.waypoints_kdtree)
 
         # Find the closest stop line position if we have to stop the car.
         _, stop_line_idx = self.stop_line_positions_kdtree.query([pose.pose.position.x, pose.pose.position.y])
@@ -98,7 +117,16 @@ class WaypointUpdater(object):
         self.stop_line_waypoint_pub.publish(Int32(stop_line_waypoint_idx))
 
         rospy.loginfo("Stop Line Waypoint idx: %s", stop_line_waypoint_idx)
-        # TODO: Now that the stop line way point index is found, figure out the deceleration or acceleration if needed.
+
+        if self.current_traffic_light is not None and\
+           (self.current_traffic_light.state == 0 or self.current_traffic_light.state == 1):
+            new_waypoints = self.set_velocity_leading_to_stop_point(closest_wp_idx, stop_line_waypoint_idx)
+        else:
+            new_waypoints = self.waypoints
+
+        # Find number of waypoints ahead dictated by LOOKAHEAD_WPS
+        next_wps = new_waypoints[closest_wp_idx:closest_wp_idx + LOOKAHEAD_WPS]
+        self.current_traffic_light = None
         self.publish(next_wps)
 
     def waypoints_cb(self, waypoints):
