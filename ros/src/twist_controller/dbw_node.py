@@ -79,7 +79,7 @@ class DBWNode(object):
         self.target_angular_vel = 0.0
 
         # TODO: Subscribe to all the topics you need to
-        rospy.Subscriber('/vehicle/dbw_enabled', Bool, self.vehicle_dbw_enabled)
+        rospy.Subscriber('/vehicle/dbw_enabled', Bool, self.vehicle_dbw_enabled_cb)
         rospy.Subscriber('/current_velocity', TwistStamped, self.current_velocity_cb)
         rospy.Subscriber('/current_pose', PoseStamped, self.current_pose_cb)
         rospy.Subscriber('/twist_cmd', TwistStamped, self.twist_cmd_cb)
@@ -114,7 +114,7 @@ class DBWNode(object):
     def final_waypoints_cb(self, msg):
         self.final_waypoints = msg.waypoints
 
-    def vehicle_dbw_enabled(self, msg):
+    def vehicle_dbw_enabled_cb(self, msg):
         self.dbw_enabled = msg
 
     def loop(self):
@@ -137,9 +137,9 @@ class DBWNode(object):
                 throttle, brake, steering = self.controller.control(self.target_linear_vel,
                                                                     self.target_angular_vel,
                                                                     self.current_linear_velocity,
-                                                                    self.current_angular_velocity,
                                                                     steer_cte)
-                rospy.logdebug('throttle: %s, brake: %s, steering: %s', throttle, brake, steering)
+                rospy.logwarn('target vel: %s, current vel: %s', self.target_linear_vel, self.current_linear_velocity)
+                rospy.logwarn('Throttle: %s', throttle)
                 self.publish(throttle, brake, steering)
             else:
                 self.controller.reset()

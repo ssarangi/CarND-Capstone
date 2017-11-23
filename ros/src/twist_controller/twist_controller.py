@@ -35,7 +35,6 @@ class Controller(object):
         self.fuel_capacity = fuel_capacity
         self.brake_deadband = brake_deadband
         self.wheel_radius = wheel_radius
-        self.previous_state = None
 
         self.clk = rospy.get_time()
 
@@ -72,35 +71,28 @@ class Controller(object):
         throttle = min(1.0, max(0.0, throttle))
         return throttle
 
-    def get_braking_force(self):
-        brake = abs((self.vehicle_mass + self.fuel_capacity) * self.wheel_radius) * 10
+    def get_braking_force(self, throttle):
+        brake = (self.vehicle_mass + self.fuel_capacity) * self.wheel_radius * (throttle * 1.25)
         return brake
 
     def control(self,
                 target_linear_vel,
                 target_angular_vel,
                 current_linear_vel,
-                current_angular_vel,
                 steer_cte):
         dt = self.get_delta_time()
 
         steer = self.get_steer_value(dt, steer_cte, target_linear_vel, target_angular_vel, current_linear_vel)
+        throttle = self.get_throttle_value(dt,
+                                           target_linear_vel,
+                                           current_linear_vel)
 
         if target_linear_vel > current_linear_vel:
-            throttle = self.get_throttle_value(dt,
-                                               target_linear_vel,
-                                               current_linear_vel)
             brake = 0.0
-            current_state = 'Throttle'
         else:
             throttle = 0.0
-            brake = self.get_braking_force()
-            current_state = 'Braking'
+            brake = self.get_braking_force(throttle)
 
-        if self.previous_state != current_state:
-            rospy.logwarn('State Changed: %s' % current_state)
-
-        self.previous_state = current_state
         return throttle, brake, steer
 
 
