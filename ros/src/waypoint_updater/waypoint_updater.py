@@ -35,6 +35,7 @@ TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 '''
 
 LOOKAHEAD_WPS = 200 # Number of waypoints we will publish. You can change this number
+MAX_VEL = 11.1
 
 
 class WaypointUpdater(object):
@@ -85,36 +86,49 @@ class WaypointUpdater(object):
     def current_velocity_cb(self, curr_vel_msg):
         self.current_velocity = curr_vel_msg.twist.linear.x
 
-    def set_velocity_leading_to_stop_point(self, current_pose_wp_idx, stop_point_idx):
-        new_waypoints = self.waypoints[:]  # Copy the list
+    def set_velocities(self, waypoints, velocities, start_wp_idx, end_wp_idx):
+        vel_idx = 0
+        for wp_idx in range(start_wp_idx, end_wp_idx + 1):
+            self.set_waypoint_velocity(waypoints, wp_idx, velocities[vel_idx])
+            vel_idx += 1
 
+    def set_linear_distribution_velocities(self, waypoints, start_vel, end_velocity, start_wp_idx, end_wp_idx):
         # Compute the total distances leading up to the stop point
-        distances = [self.distance(new_waypoints, i, i+1)
-                     for i in range(current_pose_wp_idx, stop_point_idx + 1)]
+        # distances = [self.distance(waypoints, i, i+1)
+        #              for i in range(start_wp_idx, end_wp_idx)]
 
-        total_distance = int(math.floor(sum(distances)))
+        # total_distance = int(math.floor(sum(distances)))
+        velocities = np.linspace(start_vel, end_velocity, end_wp_idx - start_wp_idx + 1)
+        self.set_velocities(waypoints, velocities, start_wp_idx, end_wp_idx)
 
-        # VEL_THRESHOLD = 5
-        # # if the deceleration < VEL_THRESHOLD mph then increase the speed to a proportion of the distance
-        # if self.start:
-        #     # Use a gaussian distribution to get the car to speed up.
-        #     # x = np.linspace(0, total_distance, total_distance)
-        #     # mu, sig = 0.1, 1.0
-        #     # distribution = np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
-        #     distribution = np.concatenate((
-        #         np.linspace(self.current_velocity, VEL_THRESHOLD, total_distance),
-        #         np.linspace(VEL_THRESHOLD, 0, total_distance)), axis=0)
-        # else:
-        # Use a linear distribution to get the speeds.
-        distribution = np.linspace(self.current_velocity, 0.0, total_distance, endpoint=True)
+    def set_smooth_acceleration_to_speed_limit(self, start_wp_idx, stop_wp_idx):
+        new_waypoints = self.waypoints[:]  # Copy the list
+        self.set_linear_distribution_velocities(new_waypoints,
+                                                min(MAX_VEL, self.current_velocity + 1.0),  # Increase the current velocity
+                                                MAX_VEL,
+                                                start_wp_idx + 1,
+                                                stop_wp_idx)
 
-        dist_idx = 0
-        velocities = []
-        for wp_idx in range(current_pose_wp_idx + 1, stop_point_idx + 1):
-            velocity = distribution[int(distances[dist_idx])]
-            velocities.append(velocity)
-            self.set_waypoint_velocity(new_waypoints, wp_idx, velocity)
-            dist_idx += 1
+        return new_waypoints
+
+    def set_velocity_leading_to_stop_point(self, start_wp_idx, stop_point_idx):
+        new_waypoints = self.waypoints[:]  # Copy the list
+        self.set_linear_distribution_velocities(new_waypoints,
+                                                self.current_velocity,
+                                                0.0,
+                                                start_wp_idx + 1,
+                                                stop_point_idx)
+
+        return new_waypoints
+
+    def behavior_lights_green(self, closest_wp_idx):
+        # If the lights are green just continue on the same path.
+        if self.deceleration_started:
+            self.deceleration_started = False
+            self.deceleration_waypoints = None
+
+        new_waypoints = self.set_smooth_acceleration_to_speed_limit(closest_wp_idx,
+                                                                    closest_wp_idx + LOOKAHEAD_WPS)
 
         return new_waypoints
 
@@ -151,31 +165,37 @@ class WaypointUpdater(object):
 
         # If the light is RED or YELLOW then slowly decrease the speed.
         if self.current_traffic_light is not None:
-            if (self.current_traffic_light.state == 0 or self.current_traffic_light.state == 1) and\
-               self.current_velocity > 0.0:
-                if not self.deceleration_started:
-                    rospy.logwarn('Deceleration Sequence Started')
-                    new_waypoints = self.set_velocity_leading_to_stop_point(closest_wp_idx, stop_line_waypoint_idx)
-                    self.deceleration_started = True
-                    self.deceleration_waypoints = new_waypoints
+            rospy.logwarn('Light color: %s', helper.get_traffic_light_color(self.current_traffic_light.state))
+            if self.current_traffic_light.state == 0 or self.current_traffic_light.state == 1:
+                if helper.deceleration_rate(self.current_velocity, (stop_line_waypoint_idx - closest_wp_idx)) > 0.1:
+                    if not self.deceleration_started:
+                        rospy.logwarn('Deceleration Sequence Started')
+                        new_waypoints = self.set_velocity_leading_to_stop_point(closest_wp_idx, stop_line_waypoint_idx)
+                        self.deceleration_started = True
+                        self.deceleration_waypoints = new_waypoints
+                    else:
+                        rospy.logwarn('Using DECELERATION WAYPOINTS CALCULATED BEFORE')
+                        new_waypoints = self.deceleration_waypoints
+                elif closest_wp_idx != stop_line_waypoint_idx:
+                    # Simulate the behavior of a green light
+                    new_waypoints = self.behavior_lights_green(closest_wp_idx)
                 else:
-                    new_waypoints = self.deceleration_waypoints
+                    rospy.logerr('NOT PUBLISHING ANYTHING SINCE ASSUMING CAR IS AT STOP')
+                    return  # Do not publish anything. The car is at a STOP and we don't need to do anything
             else:
-                # If the lights are green just continue on the same path.
-                rospy.logwarn('Light color: %s', helper.get_traffic_light_color(self.current_traffic_light.state))
-                new_waypoints = self.waypoints
-                if self.deceleration_started:
-                    self.deceleration_started = False
-                    self.deceleration_waypoints = None
-                    rospy.logerr('Lights turned Green... Deceleration Sequence Stopped')
+                # Lights are green
+                new_waypoints = self.behavior_lights_green(closest_wp_idx)
         else:
-            # Continue on the current direction
-            new_waypoints = self.waypoints
+            new_waypoints = self.behavior_lights_green(closest_wp_idx)
+
+        if stop_line_waypoint_idx - closest_wp_idx < 5:
+            rospy.logerr('Current Waypoint: %s Current Velocity: %s', closest_wp_idx, self.current_velocity)
+            for i in range(stop_line_waypoint_idx - 5, stop_line_waypoint_idx + 1):
+                rospy.loginfo('%s, %s', i, new_waypoints[i].twist.twist.linear.x)
 
         # Find number of waypoints ahead dictated by LOOKAHEAD_WPS. However, if the car is stopped then don't accelerate
-        if self.current_velocity != 0.0:
-            next_wps = new_waypoints[closest_wp_idx:closest_wp_idx + LOOKAHEAD_WPS]
-            self.publish(next_wps)
+        next_wps = new_waypoints[closest_wp_idx + 1:closest_wp_idx + LOOKAHEAD_WPS]
+        self.publish(next_wps)
 
     def waypoints_cb(self, waypoints):
         self.waypoints = waypoints.waypoints

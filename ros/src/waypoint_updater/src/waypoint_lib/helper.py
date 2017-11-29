@@ -24,6 +24,19 @@ def euclid_dist(p1, p2):
     return math.sqrt((p1.x - p2.x)**2 + (p1.y - p2.y)**2)
 
 
+def is_velocity_almost_zero(velocity):
+    if abs(velocity) < 0.001:
+        return True
+
+    return False
+
+
+def deceleration_rate(velocity, distance):
+    if distance < 0.005:
+        return 1.0
+    return velocity / distance
+
+
 def create_numpy_repr(waypoints):
     """Create a numpy representation of the waypoints message. Useful for creating kdtrees out of it."""
     points = []

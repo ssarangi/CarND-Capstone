@@ -72,7 +72,7 @@ class Controller(object):
         return throttle
 
     def get_braking_force(self, throttle):
-        brake = (self.vehicle_mass + self.fuel_capacity) * self.wheel_radius * (throttle * 1.25)
+        brake = (self.vehicle_mass + self.fuel_capacity) * self.wheel_radius * (throttle * 1.3)
         return brake
 
     def control(self,

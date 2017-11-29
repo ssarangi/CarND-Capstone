@@ -146,8 +146,8 @@ class DiagnosticsScreen:
         logger.info('Traffic Light: %s' % traffic_light)
 
         # Save the camera image
-        # camera_image = cv2.cvtColor(self.camera_image, cv2.COLOR_BGR2RGB)
-        # cv2.imwrite('src/tools/traffic_lights/%s.png' % self.camera_img_idx, camera_image)
+        camera_image = cv2.cvtColor(self.camera_image, cv2.COLOR_BGR2RGB)
+        cv2.imwrite('src/tools/traffic_lights/%s.png' % self.camera_img_idx, camera_image)
 
     def initialize_light_to_waypoint_map(self):
         # find the closest waypoint to the given (x,y) of the traffic light
