@@ -128,17 +128,17 @@ def recognize_traffic_lights(image, use_roi=False):
 
     red_circles = recognize_red_light(hsv_image)
     if red_circles is not None:
-        render_recognized_circles(image, red_circles, border_color=(255, 255, 0))
+        # render_recognized_circles(image, red_circles, border_color=(255, 255, 0))
         return image, TrafficLight.RED
 
     green_circles = recognize_green_light(hsv_image)
     if green_circles is not None:
-        render_recognized_circles(image, green_circles, border_color=(255, 0, 0))
+        # render_recognized_circles(image, green_circles, border_color=(255, 0, 0))
         return image, TrafficLight.GREEN
 
     yellow_circles = recognize_yellow_light(hsv_image)
     if yellow_circles is not None:
-        render_recognized_circles(image, yellow_circles, border_color=(255, 0, 0))
+        # render_recognized_circles(image, yellow_circles, border_color=(255, 0, 0))
         return image, TrafficLight.YELLOW
 
     return image, TrafficLight.UNKNOWN

@@ -62,7 +62,11 @@ class DBWNode(object):
                                      wheel_base,
                                      steer_ratio,
                                      min_speed,
-                                     max_lat_accel)
+                                     max_lat_accel,
+                                     vehicle_mass,
+                                     fuel_capacity,
+                                     brake_deadband,
+                                     wheel_radius)
 
         # Member variables to store current state
         self.current_linear_velocity = None
@@ -75,7 +79,7 @@ class DBWNode(object):
         self.target_angular_vel = 0.0
 
         # TODO: Subscribe to all the topics you need to
-        rospy.Subscriber('/vehicle/dbw_enabled', Bool, self.vehicle_dbw_enabled)
+        rospy.Subscriber('/vehicle/dbw_enabled', Bool, self.vehicle_dbw_enabled_cb)
         rospy.Subscriber('/current_velocity', TwistStamped, self.current_velocity_cb)
         rospy.Subscriber('/current_pose', PoseStamped, self.current_pose_cb)
         rospy.Subscriber('/twist_cmd', TwistStamped, self.twist_cmd_cb)
@@ -96,26 +100,21 @@ class DBWNode(object):
         return True
 
     def current_velocity_cb(self, msg):
-        rospy.loginfo('Current Velocity Received...')
         self.current_linear_velocity = msg.twist.linear.x
         self.current_angular_velocity = msg.twist.angular.x
 
     def current_pose_cb(self, msg):
-        rospy.loginfo('Current Pose Received...')
         self.current_pose = msg
 
     def twist_cmd_cb(self, msg):
-        rospy.loginfo('Current Twist Received...')
         self.twist_cmd = msg
         self.target_linear_vel = msg.twist.linear.x
         self.target_angular_vel = msg.twist.angular.x
 
     def final_waypoints_cb(self, msg):
-        rospy.loginfo('Final Waypoints Received...')
         self.final_waypoints = msg.waypoints
 
-    def vehicle_dbw_enabled(self, msg):
-        rospy.loginfo('DBW Enabled Param Received...')
+    def vehicle_dbw_enabled_cb(self, msg):
         self.dbw_enabled = msg
 
     def loop(self):
@@ -131,16 +130,16 @@ class DBWNode(object):
             # if <dbw is enabled>:
             #   self.publish(throttle, brake, steer)
             if not self.all_params_received():
-              rospy.loginfo('Waiting for all params ...')
+              # rospy.logerr('Waiting for all params. Probably Simulator needs to be run and Manual mode disabled...')
               continue
             elif self.dbw_enabled:
                 steer_cte = helper.calc_steer_cte(self.current_pose, self.final_waypoints)
                 throttle, brake, steering = self.controller.control(self.target_linear_vel,
                                                                     self.target_angular_vel,
                                                                     self.current_linear_velocity,
-                                                                    self.current_angular_velocity,
                                                                     steer_cte)
-                rospy.loginfo('throttle: %s, brake: %s, steering: %s', throttle, brake, steering)
+                # rospy.logwarn('target vel: %s, current vel: %s', self.target_linear_vel, self.current_linear_velocity)
+                # rospy.logwarn('Throttle: %s', throttle)
                 self.publish(throttle, brake, steering)
             else:
                 self.controller.reset()

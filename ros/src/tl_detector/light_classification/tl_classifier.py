@@ -35,7 +35,7 @@ class TLClassifier(object):
         """
         if self.use_opencv:
             traffic_light = recognize_traffic_lights(image)
-            rospy.loginfo("Found Traffic Light: %s", traffic_light_msg_to_string(traffic_light))
+            rospy.logdebug("Found Traffic Light: %s", traffic_light_msg_to_string(traffic_light))
             return traffic_light
 
         return TrafficLight.UNKNOWN
