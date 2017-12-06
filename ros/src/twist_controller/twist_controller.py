@@ -35,6 +35,8 @@ class Controller(object):
         self.fuel_capacity = fuel_capacity
         self.brake_deadband = brake_deadband
         self.wheel_radius = wheel_radius
+	self.max_throttle = max_throttle
+	self.max_brake = max_brake
 
         self.clk = rospy.get_time()
 
@@ -58,7 +60,7 @@ class Controller(object):
         # Yaw Controller
         yaw_control = self.yaw_controller.get_steering(target_linear_vel, target_angular_vel, current_linear_vel)
 
-        steer = self.steer_filter.filt(steering + 0.1 * yaw_control)
+        steer = self.steer_filter.filt(0*steering + 1 * yaw_control)
         return steer
 
     def get_throttle_value(self, dt, target_linear_vel, current_linear_vel):
@@ -67,12 +69,10 @@ class Controller(object):
         throttle = self.throttle_pid.step(velocity_cte, dt)
         throttle = self.throttle_filter.filt(throttle)
 
-        # Clamp the value between 0.0 & 1.0
-        throttle = min(1.0, max(0.0, throttle))
         return throttle
 
     def get_braking_force(self, throttle):
-        brake = (self.vehicle_mass + self.fuel_capacity) * self.wheel_radius * (throttle * 1.3)
+        brake = (self.vehicle_mass + self.fuel_capacity*GAS_DENSITY) * self.wheel_radius * (throttle * 1)
         return brake
 
     def control(self,
@@ -88,10 +88,12 @@ class Controller(object):
                                            current_linear_vel)
 
         if target_linear_vel > current_linear_vel:
+            throttle = max(0,min(throttle,self.max_throttle))
             brake = 0.0
         else:
-            throttle = 0.0
             brake = self.get_braking_force(throttle)
+	    brake = max(self.max_throttle,min(0,brake))
+	    throttle = 0.0
 
         return throttle, brake, steer
 
