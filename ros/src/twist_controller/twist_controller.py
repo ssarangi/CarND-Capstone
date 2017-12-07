@@ -37,6 +37,7 @@ class Controller(object):
         self.wheel_radius = wheel_radius
 	self.max_throttle = max_throttle
 	self.max_brake = max_brake
+        self.max_brake_torque = (vehicle_mass + fuel_capacity*GAS_DENSITY) * wheel_radius * max_brake
 
         self.clk = rospy.get_time()
 
@@ -64,7 +65,7 @@ class Controller(object):
         return steer
 
     def get_throttle_value(self, dt, target_linear_vel, current_linear_vel):
-        velocity_cte = target_linear_vel - current_linear_vel
+        velocity_cte = target_linear_vel - abs(current_linear_vel)
 
         throttle = self.throttle_pid.step(velocity_cte, dt)
         throttle = self.throttle_filter.filt(throttle)
@@ -87,12 +88,12 @@ class Controller(object):
                                            target_linear_vel,
                                            current_linear_vel)
 
-        if target_linear_vel > current_linear_vel:
+        if target_linear_vel > abs(current_linear_vel):
             throttle = max(0,min(throttle,self.max_throttle))
             brake = 0.0
         else:
             brake = self.get_braking_force(throttle)
-	    brake = max(self.max_throttle,min(0,brake))
+	    brake = max(self.max_brake_torque,min(brake,0))
 	    throttle = 0.0
 
         return throttle, brake, steer
