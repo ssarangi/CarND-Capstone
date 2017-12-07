@@ -109,7 +109,7 @@ class DBWNode(object):
     def twist_cmd_cb(self, msg):
         self.twist_cmd = msg
         self.target_linear_vel = msg.twist.linear.x
-        self.target_angular_vel = msg.twist.angular.x
+        self.target_angular_vel = msg.twist.angular.z
 
     def final_waypoints_cb(self, msg):
         self.final_waypoints = msg.waypoints
