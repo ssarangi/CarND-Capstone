@@ -56,6 +56,7 @@ def recognize_light(image, lower_range, upper_range):
 
 
 def get_hough_circles(weighted_image):
+    blur_img = cv2.GaussianBlur(weighted_image, (15, 15), 0)
     canny_img = get_canny_edge(weighted_image)
 
     circles = cv2.HoughCircles(canny_img, cv2.HOUGH_GRADIENT, 3, 20, param1=20, param2=35, minRadius=5, maxRadius=25)	
