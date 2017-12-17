@@ -57,17 +57,19 @@ def recognize_light(image, lower_range, upper_range):
 
 def get_hough_circles(weighted_image):
     blur_img = cv2.GaussianBlur(weighted_image, (15, 15), 0)
+    canny_img = get_canny_edge(weighted_image)
 
-    circles = cv2.HoughCircles(blur_img, cv2.HOUGH_GRADIENT, 0.5, 41, param1=70, param2=30, minRadius=5, maxRadius=150)
+    circles = cv2.HoughCircles(canny_img, cv2.HOUGH_GRADIENT, 3, 20, param1=20, param2=35, minRadius=5, maxRadius=25)	
+
     return circles
 
 
 def recognize_red_light(hsv_image):
-    lower_red = np.array([0, 50, 50])
+    lower_red = np.array([0,  60, 130])
     upper_red = np.array([10, 255, 255])
     red1 = recognize_light(hsv_image, lower_red, upper_red)
 
-    lower_red = np.array([170, 50, 50])
+    lower_red = np.array([160, 70, 100])
     upper_red = np.array([180, 255, 255])
     red2 = recognize_light(hsv_image, lower_red, upper_red)
 
@@ -76,29 +78,43 @@ def recognize_red_light(hsv_image):
 
 
 def recognize_green_light(hsv_image):
-    lower_green = np.array([50, 0, 50])
-    upper_green = np.array([0, 50, 0])
+    lower_green = np.array([50, 100, 120])
+    upper_green = np.array([80, 255, 255])
     green1 = recognize_light(hsv_image, lower_green, upper_green)
 
-    lower_green = np.array([50, 170, 50])
-    upper_green = np.array([255, 255, 255])
+    lower_green = np.array([60, 150, 190])
+    upper_green = np.array([85, 255, 255])
     green2 = recognize_light(hsv_image, lower_green, upper_green)
+
 
     weighted_img = cv2.addWeighted(green1, 1.0, green2, 1.0, 0.0)
     return get_hough_circles(weighted_img)
 
 
 def recognize_yellow_light(hsv_image):
-    lower_yellow = np.array([0, 200, 200])
-    upper_yellow = np.array([50, 255, 255])
+    lower_yellow = np.array([30, 70, 150])
+    upper_yellow = np.array([45, 170, 180])
     yellow1 = recognize_light(hsv_image, lower_yellow, upper_yellow)
 
-    lower_yellow = np.array([50, 200, 200])
-    upper_yellow = np.array([100, 255, 255])
+    lower_yellow = np.array([30, 70, 170])
+    upper_yellow = np.array([45, 255, 255])
     yellow2 = recognize_light(hsv_image, lower_yellow, upper_yellow)
 
     weighted_img = cv2.addWeighted(yellow1, 1.0, yellow2, 1.0, 0.0)
     return get_hough_circles(weighted_img)
+
+def get_canny_edge(weighted_img):
+    kernel       = np.ones((5,5), np.uint8)
+    kernel_erode = np.ones((3,3), np.uint8)
+
+    erode   = cv2.erode(weighted_img, kernel_erode,iterations = 1)
+    dilated = cv2.dilate(erode,  kernel)
+    dilated = cv2.dilate(dilated, kernel)
+    dilated = cv2.dilate(dilated, kernel)
+   
+    closed = cv2.morphologyEx(dilated, cv2.MORPH_CLOSE, kernel)
+    
+    return cv2.Canny(closed, 50, 70)
 
 
 def recognize_traffic_lights(image, use_roi=False):
