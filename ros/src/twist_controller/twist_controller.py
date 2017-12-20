@@ -92,7 +92,8 @@ class Controller(object):
             throttle = max(0,min(throttle,self.max_throttle))
             brake = 0.0
         else:
-	    brake = self.max_brake_torque*50 
+	    # brake torque needs to be positive! 
+	    brake = -self.max_brake_torque*1 
 	    throttle = 0.0
 
         return throttle, brake, steer
