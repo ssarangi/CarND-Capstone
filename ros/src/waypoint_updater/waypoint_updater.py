@@ -120,6 +120,11 @@ class WaypointUpdater(object):
                                                 0.0,
                                                 start_wp_idx + 1,
                                                 stop_point_idx)
+	self.set_linear_distribution_velocities(new_waypoints,
+                                                0.0,
+                                                0.0,
+                                                stop_point_idx + 1,
+                                                stop_point_idx + 5)
 
         return new_waypoints
 
@@ -217,6 +222,7 @@ class WaypointUpdater(object):
         return waypoint.twist.twist.linear.x
 
     def set_waypoint_velocity(self, waypoints, waypoint, velocity):
+	if waypoint >= len(self.waypoints): waypoint -= len(self.waypoints) 
         waypoints[waypoint].twist.twist.linear.x = velocity
 
     def distance(self, waypoints, wp1, wp2):

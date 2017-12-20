@@ -20,7 +20,7 @@ class Controller(object):
                  fuel_capacity,
                  brake_deadband,
                  wheel_radius):
-        self.throttle_pid = pid.PID(kp=1.5, ki=0.0, kd=0.01, mn=max_brake, mx=max_throttle)
+        self.throttle_pid = pid.PID(kp=3, ki=0.0, kd=0.01, mn=max_brake, mx=max_throttle)
         self.throttle_filter = lowpass.LowPassFilter(tau=0.0, ts=1.0)
 
         self.steer_pid = pid.PID(kp=0.5, ki=0.0, kd=0.2, mn=-max_steer_angle, mx=max_steer_angle)
@@ -93,7 +93,8 @@ class Controller(object):
             brake = 0.0
         else:
 	    # brake torque needs to be positive! 
-	    brake = -self.max_brake_torque*1 
+	    brake = self.get_braking_force(throttle)
+	    brake = -max(self.max_brake_torque,min(brake,0))
 	    throttle = 0.0
 
         return throttle, brake, steer
