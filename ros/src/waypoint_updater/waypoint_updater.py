@@ -98,7 +98,9 @@ class WaypointUpdater(object):
         #              for i in range(start_wp_idx, end_wp_idx)]
 
         # total_distance = int(math.floor(sum(distances)))
-        velocities = np.linspace(start_vel, end_velocity, end_wp_idx - start_wp_idx + 1)
+	if end_wp_idx > start_wp_idx - 1: delta_idx = end_wp_idx - start_wp_idx + 1
+	else: delta_idx = end_wp_idx + len(self.waypoints) - start_wp_idx + 1
+        velocities = np.linspace(start_vel, end_velocity, delta_idx)
         self.set_velocities(waypoints, velocities, start_wp_idx, end_wp_idx)
 
     def set_smooth_acceleration_to_speed_limit(self, start_wp_idx, stop_wp_idx):
@@ -167,7 +169,7 @@ class WaypointUpdater(object):
         if self.current_traffic_light is not None:
             rospy.logwarn('Light color: %s', helper.get_traffic_light_color(self.current_traffic_light.state))
             if self.current_traffic_light.state == 0 or self.current_traffic_light.state == 1:
-                if helper.deceleration_rate(self.current_velocity, (stop_line_waypoint_idx - closest_wp_idx)) > 0.1:
+                if helper.deceleration_rate(self.current_velocity, self.distance(self.waypoints,closest_wp_idx,stop_line_waypoint_idx)) > 0.1:
                     if not self.deceleration_started:
                         rospy.logwarn('Deceleration Sequence Started')
                         new_waypoints = self.set_velocity_leading_to_stop_point(closest_wp_idx, stop_line_waypoint_idx)
