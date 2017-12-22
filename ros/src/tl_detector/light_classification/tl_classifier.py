@@ -2,6 +2,7 @@ import rospy
 
 from styx_msgs.msg import TrafficLight
 from opencv_detector import recognize_traffic_lights
+from dl_detector import DeepLearningDetector
 
 
 def traffic_light_msg_to_string(traffic_light_msg):
@@ -22,6 +23,7 @@ def traffic_light_msg_to_string(traffic_light_msg):
 class TLClassifier(object):
     def __init__(self):
         self.use_opencv = True
+        self.dl_classifier = DeepLearningDetector()
 
     def get_classification(self, image):
         """Determines the color of the traffic light in the image
@@ -35,6 +37,7 @@ class TLClassifier(object):
         """
         if self.use_opencv:
             traffic_light = recognize_traffic_lights(image)
+            self.dl_classifier.detect(image)
             rospy.logdebug("Found Traffic Light: %s", traffic_light_msg_to_string(traffic_light))
             return traffic_light
 
