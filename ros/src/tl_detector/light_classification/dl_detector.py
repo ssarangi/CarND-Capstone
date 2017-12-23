@@ -12,9 +12,16 @@ THRESHOLD = 0.3
 
 class DeepLearningDetector:
   def __init__(self):
-    rospy.logwarn(os.getcwd())
-    PATH_TO_CKPT = './light_classification/model/frozen_inference_graph.pb'
-    PATH_TO_LABELS = './light_classification/model/boschlabel.pbtxt'
+    self.carla = True
+    if self.carla:
+      PATH_TO_CKPT = './light_classification/model/frozen_inference_graph.pb'
+      PATH_TO_LABELS = './light_classification/model/boschlabel.pbtxt'
+      self.NUM_CLASSES = 14
+    else:
+      PATH_TO_CKPT = 'models/sim_frozen_inference_graph.pb'
+      PATH_TO_LABELS = 'models/object-detection.pbtxt'
+      self.NUM_CLASSES = 4
+
     self.detection_graph = tf.Graph()
     with self.detection_graph.as_default():
       od_graph_def = tf.GraphDef()
@@ -24,7 +31,6 @@ class DeepLearningDetector:
         tf.import_graph_def(od_graph_def, name='')
 
 
-    self.NUM_CLASSES = 14
     self.label_map = label_map_util.load_labelmap(PATH_TO_LABELS)
     categories = label_map_util.convert_label_map_to_categories(self.label_map, max_num_classes=self.NUM_CLASSES,
                                                                 use_display_name=True)
