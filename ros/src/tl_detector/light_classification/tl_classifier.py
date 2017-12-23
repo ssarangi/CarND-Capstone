@@ -1,6 +1,6 @@
-#import rospy
+import rospy
 
-#from styx_msgs.msg import TrafficLight
+from styx_msgs.msg import TrafficLight
 from opencv_detector import recognize_traffic_lights
 from dl_detector import DeepLearningDetector
 from multiprocessing import Pool
