@@ -1,8 +1,12 @@
 import numpy as np
 import tensorflow as tf
-import rospy
-import os
+# import rospy
+import logging
 import time
+
+rospy = logging
+
+from utils import load_pbtxt
 
 if tf.__version__ != '1.4.0':
   raise ImportError('Please upgrade your tensorflow installation to v1.4.0!')
@@ -13,12 +17,12 @@ class DeepLearningDetector:
   def __init__(self):
     self.carla = True
     if self.carla:
-      PATH_TO_CKPT = './light_classification/model/frozen_inference_graph.pb'
+      PATH_TO_CKPT = './light_classification/model/carla_frozen_inference_graph.pb'
       PATH_TO_LABELS = './light_classification/model/boschlabel.pbtxt'
       self.NUM_CLASSES = 14
     else:
-      PATH_TO_CKPT = 'models/sim_frozen_inference_graph.pb'
-      PATH_TO_LABELS = 'models/object-detection.pbtxt'
+      PATH_TO_CKPT = 'model/sim_frozen_inference_graph.pb'
+      PATH_TO_LABELS = 'model/object-detection.pbtxt'
       self.NUM_CLASSES = 4
 
     self.detection_graph = tf.Graph()
@@ -29,11 +33,8 @@ class DeepLearningDetector:
         od_graph_def.ParseFromString(serialized_graph)
         tf.import_graph_def(od_graph_def, name='')
 
-    self.label_map = label_map_util.load_labelmap(PATH_TO_LABELS)
-    categories = label_map_util.convert_label_map_to_categories(self.label_map, max_num_classes=self.NUM_CLASSES,
-                                                                use_display_name=True)
-    rospy.logwarn(categories)
-    self.category_index = label_map_util.create_category_index(categories)
+    self.category_index = load_pbtxt.get_labels(PATH_TO_LABELS, self.NUM_CLASSES)
+
 
   def detect(self, image_np):
     t0 = time.time()
