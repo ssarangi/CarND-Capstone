@@ -1,8 +1,9 @@
-import rospy
+#import rospy
 
-from styx_msgs.msg import TrafficLight
+#from styx_msgs.msg import TrafficLight
 from opencv_detector import recognize_traffic_lights
 from dl_detector import DeepLearningDetector
+from multiprocessing import Pool
 
 
 def traffic_light_msg_to_string_dl(traffic_light_msg):
@@ -47,6 +48,25 @@ class TLClassifier(object):
             int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
         """
+        p = Pool(processes=2)
+        cv_traffic_lt = p.map(recognize_traffic_lights, [image])
+        dl_traffic_lt = p.map(self.dl_classifier.detect, [image])
+        p.close()
+
+        detected_light = TrafficLight.UNKNOWN
+               
+        if cv_traffic_lt == dl_traffic_lt:
+            detected_light = cv_traffic_lt           
+        elif dl_traffic_lt == TrafficLight.UNKNOWN and cv_traffic_lt != TrafficLight.UNKNOWN:
+             detected_light = cv_traffic_lt
+        elif cv_traffic_lt == TrafficLight.UNKNOWN and dl_traffic_lt != TrafficLight.UNKNOWN:
+            detected_light = dl_traffic_lt
+
+        #rospy.logdebug("Found Traffic Light: %s", traffic_light_msg_to_string_dl(detected_light))
+        
+        return detected_light
+        
+        '''
         if self.use_opencv:
             traffic_light = recognize_traffic_lights(image)
             rospy.logdebug("Found Traffic Light: %s", traffic_light_msg_to_string(traffic_light))
@@ -57,3 +77,4 @@ class TLClassifier(object):
             rospy.logdebug("Found Traffic Light: %s", traffic_light_msg_to_string_dl(predicted_label))
             return predicted_label
         return TrafficLight.UNKNOWN
+        '''
