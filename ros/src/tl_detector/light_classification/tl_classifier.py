@@ -5,6 +5,17 @@ from opencv_detector import recognize_traffic_lights
 from dl_detector import DeepLearningDetector
 
 
+def traffic_light_msg_to_string_dl(traffic_light_msg):
+    if traffic_light_msg == 1:
+        return 'GREEN'
+    elif traffic_light_msg == 2:
+        return 'RED'
+    elif traffic_light_msg == 3:
+        return 'YELLOW'
+    elif traffic_light_msg == 4:
+        return 'OFF'
+
+
 def traffic_light_msg_to_string(traffic_light_msg):
     # UNKNOWN = 4
     # GREEN = 2
@@ -22,8 +33,9 @@ def traffic_light_msg_to_string(traffic_light_msg):
 
 class TLClassifier(object):
     def __init__(self):
-        self.use_opencv = True
         self.dl_classifier = DeepLearningDetector()
+        self.use_opencv = False
+        self.use_dl = True
 
     def get_classification(self, image):
         """Determines the color of the traffic light in the image
@@ -37,8 +49,11 @@ class TLClassifier(object):
         """
         if self.use_opencv:
             traffic_light = recognize_traffic_lights(image)
-            self.dl_classifier.detect(image)
             rospy.logdebug("Found Traffic Light: %s", traffic_light_msg_to_string(traffic_light))
             return traffic_light
 
+        if self.use_dl:
+            predicted_label = self.dl_classifier.detect(image)
+            rospy.logdebug("Found Traffic Light: %s", traffic_light_msg_to_string_dl(predicted_label))
+            return predicted_label
         return TrafficLight.UNKNOWN
