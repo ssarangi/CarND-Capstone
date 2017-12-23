@@ -50,7 +50,6 @@ class WaypointUpdater(object):
         rospy.Subscriber('/current_velocity', TwistStamped, self.current_velocity_cb, queue_size=1)
         rospy.Subscriber('/vehicle/dbw_enabled', Bool, self.vehicle_dbw_enabled_cb)
 
-
         config_string = rospy.get_param("/traffic_light_config")
         self.config = yaml.load(config_string)
 
@@ -93,13 +92,11 @@ class WaypointUpdater(object):
             vel_idx += 1
 
     def set_linear_distribution_velocities(self, waypoints, start_vel, end_velocity, start_wp_idx, end_wp_idx):
-        # Compute the total distances leading up to the stop point
-        # distances = [self.distance(waypoints, i, i+1)
-        #              for i in range(start_wp_idx, end_wp_idx)]
+        if end_wp_idx > start_wp_idx - 1:
+            delta_idx = end_wp_idx - start_wp_idx + 1
+        else:
+            delta_idx = end_wp_idx + len(self.waypoints) - start_wp_idx + 1
 
-        # total_distance = int(math.floor(sum(distances)))
-	if end_wp_idx > start_wp_idx - 1: delta_idx = end_wp_idx - start_wp_idx + 1
-	else: delta_idx = end_wp_idx + len(self.waypoints) - start_wp_idx + 1
         velocities = np.linspace(start_vel, end_velocity, delta_idx)
         self.set_velocities(waypoints, velocities, start_wp_idx, end_wp_idx)
 
@@ -120,7 +117,7 @@ class WaypointUpdater(object):
                                                 0.0,
                                                 start_wp_idx + 1,
                                                 stop_point_idx)
-	self.set_linear_distribution_velocities(new_waypoints,
+        self.set_linear_distribution_velocities(new_waypoints,
                                                 0.0,
                                                 0.0,
                                                 stop_point_idx + 1,
@@ -197,8 +194,6 @@ class WaypointUpdater(object):
 
         if stop_line_waypoint_idx - closest_wp_idx < 5:
             rospy.logerr('Current Waypoint: %s Current Velocity: %s', closest_wp_idx, self.current_velocity)
-            for i in range(stop_line_waypoint_idx - 5, stop_line_waypoint_idx + 1):
-                rospy.loginfo('%s, %s', i, new_waypoints[i].twist.twist.linear.x)
 
         # Find number of waypoints ahead dictated by LOOKAHEAD_WPS. However, if the car is stopped then don't accelerate
         next_wps = new_waypoints[closest_wp_idx + 1:closest_wp_idx + LOOKAHEAD_WPS]
@@ -222,7 +217,8 @@ class WaypointUpdater(object):
         return waypoint.twist.twist.linear.x
 
     def set_waypoint_velocity(self, waypoints, waypoint, velocity):
-	if waypoint >= len(self.waypoints): waypoint -= len(self.waypoints) 
+        if waypoint >= len(self.waypoints):
+            waypoint -= len(self.waypoints)
         waypoints[waypoint].twist.twist.linear.x = velocity
 
     def distance(self, waypoints, wp1, wp2):

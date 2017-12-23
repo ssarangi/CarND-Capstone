@@ -1,10 +1,9 @@
 import numpy as np
 import tensorflow as tf
-# import rospy
+import rospy
 import logging
 import time
-
-rospy = logging
+from styx_msgs.msg import TrafficLight
 
 from utils import load_pbtxt
 
@@ -21,8 +20,8 @@ class DeepLearningDetector:
       PATH_TO_LABELS = './light_classification/model/boschlabel.pbtxt'
       self.NUM_CLASSES = 14
     else:
-      PATH_TO_CKPT = 'model/sim_frozen_inference_graph.pb'
-      PATH_TO_LABELS = 'model/object-detection.pbtxt'
+      PATH_TO_CKPT = './light_classification/model/sim_frozen_inference_graph.pb'
+      PATH_TO_LABELS = './light_classification/model/object-detection.pbtxt'
       self.NUM_CLASSES = 4
 
     self.detection_graph = tf.Graph()
@@ -34,7 +33,23 @@ class DeepLearningDetector:
         tf.import_graph_def(od_graph_def, name='')
 
     self.category_index = load_pbtxt.get_labels(PATH_TO_LABELS, self.NUM_CLASSES)
+    self.labels_2_traffic_light_id = DeepLearningDetector.category_index_to_traffic_light(self.category_index)
 
+  @classmethod
+  def category_index_to_traffic_light(cls, category_index):
+    new_category_index = {}
+    for item_id, item in category_index.items():
+      item_name = str(item['name']).lower()
+      if 'red' in item_name:
+        new_category_index[item_id] = TrafficLight.RED
+      elif 'yellow' in item_name:
+        new_category_index[item_id] = TrafficLight.YELLOW
+      elif 'green' in item_name:
+        new_category_index[item_id] = TrafficLight.GREEN
+      elif 'off' in item_name:
+        new_category_index[item_id] = TrafficLight.UNKNOWN
+
+    return new_category_index
 
   def detect(self, image_np):
     t0 = time.time()
@@ -72,13 +87,20 @@ class DeepLearningDetector:
             nums[c['id']] += 1
             scores_sum[c['id']] += s
 
-        rospy.loginfo("nums = {}, scores_sum = {}".format(nums, scores_sum))
-
         maxn = np.max(nums)
         cands = (nums == maxn)
         prediction = np.argmax(scores_sum * cands)
 
+        actual_prediction = self.labels_2_traffic_light_id.get(prediction, TrafficLight.UNKNOWN)
         rospy.loginfo("prediction = {}, max_score = {}".format(prediction, scores[0]))
         rospy.loginfo("prediction time = {:.4f} s".format(time.time() - t0))
-        # return prediction
-        return 0
+        rospy.logwarn('Actual Prediction: %s', actual_prediction)
+        return actual_prediction
+
+
+if __name__ == '__main__':
+  import cv2
+  img = cv2.imread('model/324.png')
+  img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+  dl = DeepLearningDetector()
+  dl.detect(img)
