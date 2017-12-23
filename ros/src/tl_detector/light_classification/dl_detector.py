@@ -23,9 +23,9 @@ def Get_Predicted_Label(image, simulation=True):
     # load trained tensorflow graph
     with detection_graph.as_default():
         graph_def = tf.GraphDef()
-            with tf.gfile.GFile(graph_filename, 'rb') as f:
-                graph_def.ParseFromString(f.read())
-                tf.import_graph_def(graph_def, name='')
+        with tf.gfile.GFile(graph_filename, 'rb') as f:
+            graph_def.ParseFromString(f.read())
+            tf.import_graph_def(graph_def, name='')
 
             sess = tf.Session(graph=detection_graph, config=config)
             image_tensor = detection_graph.get_tensor_by_name('image_tensor:0')
@@ -47,9 +47,7 @@ def Get_Predicted_Label(image, simulation=True):
                  feed_dict={image_tensor: image_np_expanded})
 
             # Remove unnecessary dimensions
-            boxes   = np.squeeze(bindex = next((i for i, clsid in enumerate(class_) if clsid < 4), None)oxes)
             class_  = np.int32(np.squeeze(classes).tolist())
-            scores  = np.squeeze(scores)
 
             index = next((i for i, clsid in enumerate(class_) if clsid < 4), None)
 
