@@ -1,6 +1,5 @@
 import numpy as np
 import tensorflow as tf
-from utils import label_map_util
 import rospy
 import os
 import time
