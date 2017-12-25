@@ -159,7 +159,7 @@ class WaypointUpdater(object):
         self.stop_line_waypoint_pub.publish(Int32(stop_line_waypoint_idx))
 
         if closest_wp_idx == stop_line_waypoint_idx or self.current_velocity == 0.0:
-            rospy.logerr('Stop Line waypoint reached. Deceleration Sequence Stopped. Current Vel: %s', self.current_velocity)
+            rospy.loginfo('Stop Line waypoint reached. Deceleration Sequence Stopped. Current Vel: %s', self.current_velocity)
             self.deceleration_started = False
             self.deceleration_waypoints = None
 
@@ -169,29 +169,24 @@ class WaypointUpdater(object):
             if self.current_traffic_light.state == 0 or self.current_traffic_light.state == 1:
                 if helper.deceleration_rate(self.current_velocity, (stop_line_waypoint_idx - closest_wp_idx)) > 0.1:
                     if not self.deceleration_started:
-                        rospy.logwarn('Deceleration Sequence Started')
+                        rospy.loginfo('Deceleration Sequence Started')
                         new_waypoints = self.set_velocity_leading_to_stop_point(closest_wp_idx, stop_line_waypoint_idx)
                         self.deceleration_started = True
                         self.deceleration_waypoints = new_waypoints
                     else:
-                        rospy.logwarn('Using DECELERATION WAYPOINTS CALCULATED BEFORE')
+                        rospy.loginfo('Using DECELERATION WAYPOINTS CALCULATED BEFORE')
                         new_waypoints = self.deceleration_waypoints
                 elif closest_wp_idx != stop_line_waypoint_idx:
                     # Simulate the behavior of a green light
                     new_waypoints = self.behavior_lights_green(closest_wp_idx)
                 else:
-                    rospy.logerr('NOT PUBLISHING ANYTHING SINCE ASSUMING CAR IS AT STOP')
+                    rospy.loginfo('NOT PUBLISHING ANYTHING SINCE ASSUMING CAR IS AT STOP')
                     return  # Do not publish anything. The car is at a STOP and we don't need to do anything
             else:
                 # Lights are green
                 new_waypoints = self.behavior_lights_green(closest_wp_idx)
         else:
             new_waypoints = self.behavior_lights_green(closest_wp_idx)
-
-        if stop_line_waypoint_idx - closest_wp_idx < 5:
-            rospy.logerr('Current Waypoint: %s Current Velocity: %s', closest_wp_idx, self.current_velocity)
-            for i in range(stop_line_waypoint_idx - 5, stop_line_waypoint_idx + 1):
-                rospy.loginfo('%s, %s', i, new_waypoints[i].twist.twist.linear.x)
 
         # Find number of waypoints ahead dictated by LOOKAHEAD_WPS. However, if the car is stopped then don't accelerate
         next_wps = new_waypoints[closest_wp_idx + 1:closest_wp_idx + LOOKAHEAD_WPS]

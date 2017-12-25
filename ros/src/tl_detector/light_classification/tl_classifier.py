@@ -23,7 +23,7 @@ class TLClassifier(object):
     def __init__(self):
         self.use_opencv = True
 
-    def get_classification(self, image):
+    def get_classification(self, image, is_carla, CarX, CarY, CarZ, Oz, Ow, Lx, Ly, Lz):
         """Determines the color of the traffic light in the image
 
         Args:
@@ -34,7 +34,7 @@ class TLClassifier(object):
 
         """
         if self.use_opencv:
-            traffic_light = recognize_traffic_lights(image)
+            traffic_light = recognize_traffic_lights(image, is_carla, CarX, CarY, CarZ, Oz, Ow, Lx, Ly, Lz)
             rospy.logdebug("Found Traffic Light: %s", traffic_light_msg_to_string(traffic_light))
             return traffic_light
 
