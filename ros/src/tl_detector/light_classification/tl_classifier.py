@@ -1,8 +1,10 @@
+import functools
 import rospy
+import time
 
 from styx_msgs.msg import TrafficLight
 from opencv_detector import recognize_traffic_lights
-from dl_detector import DeepLearningDetector
+from dl_detector import DeepLearningDetector, process_top_level_instance, another_method
 from multiprocessing import Pool
 
 
@@ -48,10 +50,19 @@ class TLClassifier(object):
             int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
         """
-        p = Pool(processes=2)
-        cv_traffic_lt = p.map(recognize_traffic_lights, [image])
-        dl_traffic_lt = p.map(self.dl_classifier.detect, [image])
-        p.close()
+        multi = False
+        _bound_instance_method_alias = functools.partial(process_top_level_instance, self.dl_classifier)
+        if multi:
+            p = Pool(processes=2)
+            cv_traffic_lt = p.map(recognize_traffic_lights, [image])
+            dl_traffic_lt = p.map(another_method, [image])
+            p.join()
+            p.close()
+        else:
+            start = time.time()
+            cv_traffic_lt = recognize_traffic_lights(image)
+            rospy.logwarn('Time  Taken for light classification: %s' % (time.time() - start))
+            dl_traffic_lt = self.dl_classifier.detect(image)
 
         detected_light = TrafficLight.UNKNOWN
                
@@ -61,8 +72,10 @@ class TLClassifier(object):
              detected_light = cv_traffic_lt
         elif cv_traffic_lt == TrafficLight.UNKNOWN and dl_traffic_lt != TrafficLight.UNKNOWN:
             detected_light = dl_traffic_lt
+        elif cv_traffic_lt != dl_traffic_lt:
+            return TrafficLight.UNKNOWN
 
-        #rospy.logdebug("Found Traffic Light: %s", traffic_light_msg_to_string_dl(detected_light))
+        rospy.logdebug("Found Traffic Light: %s", traffic_light_msg_to_string_dl(detected_light))
         
         return detected_light
         

@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import rospy
 
 from styx_msgs.msg import TrafficLight
 
@@ -117,6 +118,8 @@ def get_canny_edge(weighted_img):
 
 
 def recognize_traffic_lights(image, use_roi=False):
+    cv2.setNumThreads(0)
+    rospy.logwarn(image.shape)
     # Define the region of interest to extract
     image_for_recognizing = image
     if use_roi:

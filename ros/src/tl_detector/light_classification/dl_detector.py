@@ -1,7 +1,6 @@
 import numpy as np
 import tensorflow as tf
 import rospy
-import logging
 import time
 from styx_msgs.msg import TrafficLight
 
@@ -97,6 +96,13 @@ class DeepLearningDetector:
         rospy.logwarn('Actual Prediction: %s', actual_prediction)
         return actual_prediction
 
+
+def process_top_level_instance(instance_obj, image):
+  return instance_obj.detect(image)
+
+
+def another_method(ss):
+  return TrafficLight.RED
 
 if __name__ == '__main__':
   import cv2
