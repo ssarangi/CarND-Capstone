@@ -35,10 +35,12 @@ def telemetry(sid, data):
     bridge.publish_odometry(data)
     for i in range(len(msgs)):
         topic, data = msgs.pop(0)
+        if topic == "throttle": print "throttle data", data
         sio.emit(topic, data=data, skip_sid=True)
 
 @sio.on('control')
 def control(sid, data):
+    print ("Control from sim", data)
     bridge.publish_controls(data)
 
 @sio.on('obstacle')

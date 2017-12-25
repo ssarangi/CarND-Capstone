@@ -50,10 +50,11 @@ class Bridge(object):
             '/vehicle/brake_cmd': self.callback_brake,
         }
 
-        self.subscribers = [rospy.Subscriber(e.topic, TYPE[e.type], self.callbacks[e.topic])
+        self.subscribers = [rospy.Subscriber(e.topic, TYPE[e.type], self.callbacks[e.topic],\
+                                             queue_size=1)#)
                             for e in conf.subscribers]
 
-        self.publishers = {e.name: rospy.Publisher(e.topic, TYPE[e.type], queue_size=1)
+        self.publishers = {e.name: rospy.Publisher(e.topic, TYPE[e.type], queue_size=1)#1)
                            for e in conf.publishers}
 
     def create_light(self, x, y, z, yaw, state):
@@ -143,6 +144,7 @@ class Bridge(object):
         self.publishers['steering_report'].publish(self.create_steer(steering))
         self.publishers['throttle_report'].publish(self.create_float(throttle))
         self.publishers['brake_report'].publish(self.create_float(brake))
+        print "publish throttle", throttle
 
     def publish_obstacles(self, data):
         for obs in data['obstacles']:
@@ -184,6 +186,7 @@ class Bridge(object):
         self.server('steer', data={'steering_angle': str(data.steering_wheel_angle_cmd)})
 
     def callback_throttle(self, data):
+        print "callback_throttle", data
         self.server('throttle', data={'throttle': str(data.pedal_cmd)})
 
     def callback_brake(self, data):

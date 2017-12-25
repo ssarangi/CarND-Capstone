@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<launch output="screen">
+<launch>
     <!-- Simulator Bridge -->
     <include file="$(find styx)/launch/server.launch" />
 

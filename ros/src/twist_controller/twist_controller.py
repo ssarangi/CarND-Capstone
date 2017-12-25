@@ -35,8 +35,8 @@ class Controller(object):
         self.fuel_capacity = fuel_capacity
         self.brake_deadband = brake_deadband
         self.wheel_radius = wheel_radius
-	self.max_throttle = max_throttle
-	self.max_brake = max_brake
+        self.max_throttle = max_throttle
+        self.max_brake = max_brake
         self.max_brake_torque = (vehicle_mass + fuel_capacity*GAS_DENSITY) * wheel_radius * max_brake
 
         self.clk = rospy.get_time()
@@ -92,10 +92,10 @@ class Controller(object):
             throttle = max(0,min(throttle,self.max_throttle))
             brake = 0.0
         else:
-	    # brake torque needs to be positive! 
-	    brake = self.get_braking_force(throttle)
-	    brake = -max(self.max_brake_torque,min(brake,0))
-	    throttle = 0.0
+            # brake torque needs to be positive!
+            brake = self.get_braking_force(throttle)
+            brake = -max(self.max_brake_torque,min(brake,0))
+            throttle = 0.0
 
         return throttle, brake, steer
 

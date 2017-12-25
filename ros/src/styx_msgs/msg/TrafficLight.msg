@@ -1,5 +1,4 @@
 Header header
-int32 idx
 geometry_msgs/PoseStamped pose
 uint8 state
 
