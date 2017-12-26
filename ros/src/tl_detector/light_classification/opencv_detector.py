@@ -319,12 +319,11 @@ def get_canny_edge(weighted_img):
     return cv2.Canny(closed, 50, 70)
 
 
-def recognize_traffic_lights(image, is_carla, CarX, CarY, CarZ, Oz, Ow, Lx, Ly, Lz, use_roi=False):
+def recognize_traffic_lights(image, CarX, CarY, CarZ, Oz, Ow, Lx, Ly, Lz, use_roi=False):
     global rint, yint, gint, uint
     global frameno
     global rexpected
     global isCarla
-    isCarla = is_carla
 
     if not isCarla:
         # Define the region of interest to extract
