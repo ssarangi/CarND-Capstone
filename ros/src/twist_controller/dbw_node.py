@@ -138,8 +138,8 @@ class DBWNode(object):
                                                                     self.target_angular_vel,
                                                                     self.current_linear_velocity,
                                                                     steer_cte)
-                rospy.logwarn('target vel: %s, current vel: %s', self.target_linear_vel, self.current_linear_velocity)
-                rospy.logwarn('Throttle: %s', throttle)
+                # rospy.logwarn('target vel: %s, current vel: %s', self.target_linear_vel, self.current_linear_velocity)
+                # rospy.logwarn('Throttle: %s', throttle)
                 self.publish(throttle, brake, steering)
             else:
                 self.controller.reset()
