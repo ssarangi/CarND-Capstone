@@ -23,7 +23,7 @@ class TLClassifier(object):
     def __init__(self):
         self.use_opencv = True
 
-    def get_classification(self, image, is_carla, CarX, CarY, CarZ, Oz, Ow, Lx, Ly, Lz):
+    def get_classification(self, image, CarX, CarY, CarZ, Oz, Ow, Lx, Ly, Lz):
         """Determines the color of the traffic light in the image
         Args:
             image (cv::Mat): image containing the traffic light
