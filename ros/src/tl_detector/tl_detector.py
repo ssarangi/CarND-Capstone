@@ -39,6 +39,7 @@ class TLDetector(object):
         sub6 = rospy.Subscriber('/image_color', Image, self.image_cb)
 
         config_string = rospy.get_param("/traffic_light_config")
+        self.is_carla = rospy.get_param("/is_carla", False)
         self.config = yaml.load(config_string)
         self.stop_line_positions = self.config['stop_line_positions']
         self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
@@ -249,7 +250,7 @@ class TLDetector(object):
                 self.file.write(string)
 
         #Get classification
-        result = self.light_classifier.get_classification(cv_image, CarX, CarY, CarZ, Oz, Ow, Lx, Ly, Lz)
+        result = self.light_classifier.get_classification(cv_image, self.is_carla, CarX, CarY, CarZ, Oz, Ow, Lx, Ly, Lz)
         if frameno > 10000:#% 50 == 0: # set to never output frames, use < to output
             #cv2.imwrite("rosbags/"+str(frameno)+".png", cv_image)
             color =  colortxt[result]
