@@ -12,7 +12,6 @@ from waypoint_lib import helper
 import scipy.spatial
 import tf
 import time
-import yaml
 
 STATE_COUNT_THRESHOLD = 3
 
