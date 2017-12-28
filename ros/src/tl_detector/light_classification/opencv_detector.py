@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import rospy
 
 from styx_msgs.msg import TrafficLight
 
@@ -85,7 +86,6 @@ def recognize_green_light(hsv_image):
     upper_green = np.array([85, 255, 255])
     green2 = recognize_light(hsv_image, lower_green, upper_green)
 
-
     weighted_img = cv2.addWeighted(green1, 1.0, green2, 1.0, 0.0)
     return get_hough_circles(weighted_img)
 
@@ -101,6 +101,7 @@ def recognize_yellow_light(hsv_image):
 
     weighted_img = cv2.addWeighted(yellow1, 1.0, yellow2, 1.0, 0.0)
     return get_hough_circles(weighted_img)
+
 
 def get_canny_edge(weighted_img):
     kernel       = np.ones((5,5), np.uint8)

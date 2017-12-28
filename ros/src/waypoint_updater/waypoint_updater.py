@@ -50,7 +50,6 @@ class WaypointUpdater(object):
         rospy.Subscriber('/current_velocity', TwistStamped, self.current_velocity_cb, queue_size=1)
         rospy.Subscriber('/vehicle/dbw_enabled', Bool, self.vehicle_dbw_enabled_cb)
 
-
         config_string = rospy.get_param("/traffic_light_config")
         self.config = yaml.load(config_string)
 
@@ -64,6 +63,8 @@ class WaypointUpdater(object):
 
         self.waypoints_kdtree = None
         self.current_traffic_light = None
+        self.previous_traffic_light = TrafficLight()
+        self.previous_traffic_light.state = TrafficLight.UNKNOWN
 
         self.current_pose = None
         self.stop_line_positions = None
@@ -93,9 +94,10 @@ class WaypointUpdater(object):
             vel_idx += 1
 
     def set_linear_distribution_velocities(self, waypoints, start_vel, end_velocity, start_wp_idx, end_wp_idx):
-        # Compute the total distances leading up to the stop point
-        # distances = [self.distance(waypoints, i, i+1)
-        #              for i in range(start_wp_idx, end_wp_idx)]
+        if end_wp_idx > start_wp_idx - 1:
+            delta_idx = end_wp_idx - start_wp_idx + 1
+        else:
+            delta_idx = end_wp_idx + len(self.waypoints) - start_wp_idx + 1
 
         # total_distance = int(math.floor(sum(distances)))
         if end_wp_idx > start_wp_idx - 1:
@@ -132,6 +134,7 @@ class WaypointUpdater(object):
 
     def behavior_lights_green(self, closest_wp_idx):
         # If the lights are green just continue on the same path.
+        rospy.logwarn('Choosing behavior for light GREEN')
         if self.deceleration_started:
             self.deceleration_started = False
             self.deceleration_waypoints = None
@@ -174,9 +177,19 @@ class WaypointUpdater(object):
 
         # If the light is RED or YELLOW then slowly decrease the speed.
         if self.current_traffic_light is not None:
-            rospy.logwarn('Light color: %s', helper.get_traffic_light_color(self.current_traffic_light.state))
+            # Log what color of traffic light change did we see
+            if self.current_traffic_light.state != self.previous_traffic_light.state:
+                rospy.logwarn('Light color changed from %s to %s',
+                              helper.get_traffic_light_color(self.previous_traffic_light.state),
+                              helper.get_traffic_light_color(self.current_traffic_light.state))
+                self.previous_traffic_light = self.current_traffic_light
+
             if self.current_traffic_light.state == 0 or self.current_traffic_light.state == 1:
-                if helper.deceleration_rate(self.current_velocity, self.distance(self.waypoints,closest_wp_idx,stop_line_waypoint_idx)) > 0.1:
+                deceleration_rate = helper.deceleration_rate(self.current_velocity,
+                                            self.distance(self.waypoints, closest_wp_idx, stop_line_waypoint_idx))
+
+                rospy.logwarn(deceleration_rate)
+                if deceleration_rate > 0.1:
                     if not self.deceleration_started:
                         rospy.logwarn('Deceleration Sequence Started')
                         new_waypoints = self.set_velocity_leading_to_stop_point(closest_wp_idx, stop_line_waypoint_idx)
@@ -196,11 +209,6 @@ class WaypointUpdater(object):
                 new_waypoints = self.behavior_lights_green(closest_wp_idx)
         else:
             new_waypoints = self.behavior_lights_green(closest_wp_idx)
-
-        if stop_line_waypoint_idx - closest_wp_idx < 5:
-            rospy.logerr('Current Waypoint: %s Current Velocity: %s', closest_wp_idx, self.current_velocity)
-            for i in range(stop_line_waypoint_idx - 5, stop_line_waypoint_idx + 1):
-                rospy.loginfo('%s, %s', i, new_waypoints[i].twist.twist.linear.x)
 
         # Find number of waypoints ahead dictated by LOOKAHEAD_WPS. However, if the car is stopped then don't accelerate
         next_wps = new_waypoints[closest_wp_idx + 1:closest_wp_idx + LOOKAHEAD_WPS]
