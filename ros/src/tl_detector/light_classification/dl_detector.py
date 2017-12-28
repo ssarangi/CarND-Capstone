@@ -91,9 +91,6 @@ class DeepLearningDetector:
         prediction = np.argmax(scores_sum * cands)
 
         actual_prediction = self.labels_2_traffic_light_id.get(prediction, TrafficLight.UNKNOWN)
-        rospy.loginfo("prediction = {}, max_score = {}".format(prediction, scores[0]))
-        rospy.loginfo("prediction time = {:.4f} s".format(time.time() - t0))
-        rospy.logwarn('Actual Prediction: %s', actual_prediction)
         return actual_prediction
 
 
