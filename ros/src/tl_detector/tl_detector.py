@@ -39,9 +39,10 @@ class TLDetector(object):
         rospy.Subscriber('/image_color', Image, self.image_cb)
 
         self.upcoming_traffic_light_pub = rospy.Publisher('/traffic_waypoint', TrafficLight, queue_size=1)
+        self.is_carla = rospy.get_param("/is_carla", False)
 
         self.bridge = CvBridge()
-        self.light_classifier = TLClassifier()
+        self.light_classifier = TLClassifier(self.is_carla)
         self.listener = tf.TransformListener()
 
         self.state = TrafficLight.UNKNOWN
