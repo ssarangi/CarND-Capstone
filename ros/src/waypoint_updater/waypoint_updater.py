@@ -63,6 +63,8 @@ class WaypointUpdater(object):
 
         self.waypoints_kdtree = None
         self.current_traffic_light = None
+        self.previous_traffic_light = TrafficLight()
+        self.previous_traffic_light.state = TrafficLight.UNKNOWN
 
         self.current_pose = None
         self.stop_line_positions = None
@@ -127,6 +129,7 @@ class WaypointUpdater(object):
 
     def behavior_lights_green(self, closest_wp_idx):
         # If the lights are green just continue on the same path.
+        rospy.logwarn('Choosing behavior for light GREEN')
         if self.deceleration_started:
             self.deceleration_started = False
             self.deceleration_waypoints = None
@@ -169,11 +172,19 @@ class WaypointUpdater(object):
 
         # If the light is RED or YELLOW then slowly decrease the speed.
         if self.current_traffic_light is not None:
-            rospy.logwarn('Light color: %s', helper.get_traffic_light_color(self.current_traffic_light.state))
-            if self.current_traffic_light.state == 0 or self.current_traffic_light.state == 1:
-                if helper.deceleration_rate(self.current_velocity,
-                                            self.distance(self.waypoints, closest_wp_idx, stop_line_waypoint_idx)) > 0.1:
+            # Log what color of traffic light change did we see
+            if self.current_traffic_light.state != self.previous_traffic_light.state:
+                rospy.logwarn('Light color changed from %s to %s',
+                              helper.get_traffic_light_color(self.previous_traffic_light.state),
+                              helper.get_traffic_light_color(self.current_traffic_light.state))
+                self.previous_traffic_light = self.current_traffic_light
 
+            if self.current_traffic_light.state == 0 or self.current_traffic_light.state == 1:
+                deceleration_rate = helper.deceleration_rate(self.current_velocity,
+                                            self.distance(self.waypoints, closest_wp_idx, stop_line_waypoint_idx))
+
+                rospy.logwarn(deceleration_rate)
+                if deceleration_rate > 0.1:
                     if not self.deceleration_started:
                         rospy.logwarn('Deceleration Sequence Started')
                         new_waypoints = self.set_velocity_leading_to_stop_point(closest_wp_idx, stop_line_waypoint_idx)
