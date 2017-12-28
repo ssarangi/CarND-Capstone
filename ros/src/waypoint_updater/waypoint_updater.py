@@ -171,7 +171,9 @@ class WaypointUpdater(object):
         if self.current_traffic_light is not None:
             rospy.logwarn('Light color: %s', helper.get_traffic_light_color(self.current_traffic_light.state))
             if self.current_traffic_light.state == 0 or self.current_traffic_light.state == 1:
-                if helper.deceleration_rate(self.current_velocity, self.distance(self.waypoints,closest_wp_idx,stop_line_waypoint_idx)) > 0.1:
+                if helper.deceleration_rate(self.current_velocity,
+                                            self.distance(self.waypoints, closest_wp_idx, stop_line_waypoint_idx)) > 0.1:
+
                     if not self.deceleration_started:
                         rospy.logwarn('Deceleration Sequence Started')
                         new_waypoints = self.set_velocity_leading_to_stop_point(closest_wp_idx, stop_line_waypoint_idx)
@@ -191,9 +193,6 @@ class WaypointUpdater(object):
                 new_waypoints = self.behavior_lights_green(closest_wp_idx)
         else:
             new_waypoints = self.behavior_lights_green(closest_wp_idx)
-
-        if stop_line_waypoint_idx - closest_wp_idx < 5:
-            rospy.logerr('Current Waypoint: %s Current Velocity: %s', closest_wp_idx, self.current_velocity)
 
         # Find number of waypoints ahead dictated by LOOKAHEAD_WPS. However, if the car is stopped then don't accelerate
         next_wps = new_waypoints[closest_wp_idx + 1:closest_wp_idx + LOOKAHEAD_WPS]

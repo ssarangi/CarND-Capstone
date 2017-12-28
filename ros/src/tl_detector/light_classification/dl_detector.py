@@ -13,6 +13,7 @@ THRESHOLD = 0.3
 
 class DeepLearningDetector:
   def __init__(self):
+    rospy.logwarn('DeepLearningDetector init method')
     self.carla = True
     if self.carla:
       PATH_TO_CKPT = './light_classification/model/carla_frozen_inference_graph.pb'
